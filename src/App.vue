@@ -1,21 +1,24 @@
 <template>
   <div id="app">
-    <img src="./assets/logo.png">
-    <h1>{{ msg }}</h1>
-    <h2>Essential Links</h2>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank">Forum</a></li>
-      <li><a href="https://gitter.im/vuejs/vue" target="_blank">Gitter Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank">Twitter</a></li>
-    </ul>
-    <h2>Ecosystem</h2>
-    <ul>
-      <li><a href="http://router.vuejs.org/" target="_blank">vue-router</a></li>
-      <li><a href="http://vuex.vuejs.org/" target="_blank">vuex</a></li>
-      <li><a href="http://vue-loader.vuejs.org/" target="_blank">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank">awesome-vue</a></li>
-    </ul>
+    <main class="main">
+      <div class="container">
+        <button type="button" class="btn btn-default" @click="login">
+          匿名ユーザーでログイン
+        </button>
+        <label for="nameInput">名前</label>
+        <input type="text" id="nameInput" v-model="name">
+        <label for="messageInput">メッセージ</label>
+        <input type="text" id="messageInput" v-model="message">
+        <button type="button" class="btn btn-default" @click="sendMessage">
+          送信
+        </button>
+        <ul class="list-group">
+          <li v-for="item in list" class="list-group-item">
+            {{item.name}} / {{item.message}}
+          </li>
+        </ul>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -24,37 +27,72 @@ export default {
   name: 'app',
   data () {
     return {
-      msg: 'Welcome to Your Vue.js App'
+      list: [],
+      name:'',
+      message:''
     }
+  },
+  methods:{
+    login(){
+      firebase.auth().signInAnonymously().then(e => {
+        //ログイン成功
+        console.log(e)
+        this.listen();
+      }).catch((error) => {
+        //エラーメッセージ
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.log('エラーメッセージ',errorCode,errorMessage)
+      })
+    },
+    listen(){
+      firebase.database().ref('myBoad/').on('value',snapshot => {
+        if(snapshot){
+          const rootList = snapshot.val();
+          let list = [];
+          console.log(Object.keys(rootList))
+          //データリストを配列に変換する
+          Object.keys(rootList).forEach((val,key) => {
+            rootList[val].id = val;
+            list.push(rootList[val])
+          })
+          this.list = list;
+        }
+      })
+    },
+    pushData(){
+      firebase.database().ref('myBoad/').push({
+        name:'test',
+        message:'foo'
+      })
+    },
+    sendMessage(){
+      // 空欄の場合は送信しない
+      if(!this.name || !this.message) return;
+      //送信
+      firebase.database().ref('myBoad/').push({
+        name:this.name,
+        message:this.message
+      })
+      //送信後にinputを空にする
+      this.message = "";
+    }
+  },
+  created(){
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){
+        console.log('is login.')
+        this.listen();
+      }else{
+        console.log('No user is signed in.')
+      }
+    })
   }
 }
 </script>
 
 <style lang="scss">
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-
-h1, h2 {
-  font-weight: normal;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-
-a {
-  color: #42b983;
-}
+  .main{
+    margin-top: 70px;
+  }
 </style>
