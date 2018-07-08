@@ -2,9 +2,16 @@
   <div id="app">
     <main class="main">
       <div class="container">
-        <button type="button" class="btn btn-default" @click="login">
-          匿名ユーザーでログイン
-        </button>
+        <ul class="list-group displayArea">
+          <li v-for="item in list" class="list-group-item">
+            {{item.name}} / {{item.message}}
+          </li>
+        </ul>
+        <div class="login">
+          <button type="button" class="btn btn-default" @click="login" v-show="!isLogin">
+            匿名ユーザーでログイン
+          </button>
+        </div>
         <label for="nameInput">名前</label>
         <input type="text" id="nameInput" v-model="name">
         <label for="messageInput">メッセージ</label>
@@ -12,11 +19,6 @@
         <button type="button" class="btn btn-default" @click="sendMessage">
           送信
         </button>
-        <ul class="list-group">
-          <li v-for="item in list" class="list-group-item">
-            {{item.name}} / {{item.message}}
-          </li>
-        </ul>
       </div>
     </main>
   </div>
@@ -27,12 +29,16 @@ export default {
   name: 'app',
   data () {
     return {
+      isLogin:false,
       list: [],
       name:'',
       message:''
     }
   },
   methods:{
+    autoScroll(){
+      $('.displayArea').animate({scrollTop: $('.displayArea')[0].scrollHeight})
+    },
     login(){
       firebase.auth().signInAnonymously().then(e => {
         //ログイン成功
@@ -50,7 +56,6 @@ export default {
         if(snapshot){
           const rootList = snapshot.val();
           let list = [];
-          console.log(Object.keys(rootList))
           //データリストを配列に変換する
           Object.keys(rootList).forEach((val,key) => {
             rootList[val].id = val;
@@ -59,6 +64,7 @@ export default {
           this.list = list;
         }
       })
+      
     },
     pushData(){
       firebase.database().ref('myBoad/').push({
@@ -76,23 +82,32 @@ export default {
       })
       //送信後にinputを空にする
       this.message = "";
+      this.autoScroll();
     }
   },
   created(){
     firebase.auth().onAuthStateChanged(user=>{
       if(user){
         console.log('is login.')
+        this.isLogin = true;
         this.listen();
       }else{
         console.log('No user is signed in.')
       }
     })
+  },
+  mounted(){
+    this.autoScroll();
   }
 }
 </script>
 
 <style lang="scss">
   .main{
-    margin-top: 70px;
+    margin-top: 50px;
+  }
+  .displayArea{
+    overflow-y: auto;
+    height: 450px;
   }
 </style>
